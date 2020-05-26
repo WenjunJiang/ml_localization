@@ -11,10 +11,10 @@ def getLabel(xrange,yrange, pos_gt):
     ret = np.zeros((nX*nY, nSample))
     for i in range(pos_gt.shape[0]):
         x1,y1,x2,y2 = pos_gt[i,0],pos_gt[i,1],pos_gt[i,3],pos_gt[i,4]
-        if x1 >= xrange[0] and y1>=yrange[0]:
+        if x1 !=0 or y1 !=0:
             idx = int((x1-xrange[0])/0.2)*nY+int((y1-yrange[0])/0.2)
             ret[idx,i//10]=1
-        if x2>=xrange[0] and y2>=yrange[0]:
+        if x2!=0 or y2!=0:
             idx = int((x2 - xrange[0]) / 0.2) * nY + int((y2 - yrange[0]) / 0.2)
             ret[idx, i // 10] = 1
     return ret
@@ -48,7 +48,7 @@ if __name__=='__main__':
     partTrain, partPercent = True, 0.7
     allTrain, allPercent = False, 0.7
     # for fi in range(len(motion_files)):
-    for fi in range(6,7):
+    for fi in range(4,5):
         fname = param_path+'feature_'+motion_files[fi]
         feature = sio.loadmat(fname) #It is a dict with 2 keys: pos 936*2, pos_feature 936*600*9
 
