@@ -48,7 +48,7 @@ if __name__=='__main__':
     partTrain, partPercent = True, 0.7
     allTrain, allPercent = False, 0.7
     # for fi in range(len(motion_files)):
-    for fi in range(1):
+    for fi in range(6,7):
         fname = param_path+'feature_'+motion_files[fi]
         feature = sio.loadmat(fname) #It is a dict with 2 keys: pos 936*2, pos_feature 936*600*9
 
@@ -59,17 +59,17 @@ if __name__=='__main__':
         featureMat = feature['pos_feature']
 
         if partTrain:
-            X_train.append(featureMat[:,:int(featureMat.shape[1]*partPercent),:].reshape((-1,9)))
-            Y_train.append(labelMat[:,:int(labelMat.shape[1]*partPercent)].flatten())
-            X_test.append(featureMat[:,int(featureMat.shape[1]*partPercent):,:].reshape(-1,9))
-            Y_test.append(labelMat[:,int(labelMat.shape[1] * partPercent):].flatten())
+            X_train.append(np.transpose(featureMat[:,:int(featureMat.shape[1]*partPercent),:],(1,0,2)).reshape((-1,9)))
+            Y_train.append(np.transpose(labelMat[:,:int(labelMat.shape[1]*partPercent)],(1,0)).flatten())
+            X_test.append(np.transpose(featureMat[:,int(featureMat.shape[1]*partPercent):,:],(1,0,2)).reshape(-1,9))
+            Y_test.append(np.transpose(labelMat[:,int(labelMat.shape[1] * partPercent):],(1,0)).flatten())
         elif allTrain:
             if fi<=len(motion_files)*allPercent:
-                X_train.append(featureMat.reshape((-1,9)))
-                Y_train.append(labelMat.flatten())
+                X_train.append(np.transpose(featureMat,(1,0,2)).reshape((-1,9)))
+                Y_train.append(np.transpose(labelMat,(1,0)).flatten())
             else:
-                X_test.append(featureMat.reshape((-1,9)))
-                Y_test.append(labelMat.flatten())
+                X_test.append(np.transpose(featureMat,(1,0,2)).reshape((-1,9)))
+                Y_test.append(np.transpose(labelMat,(1,0)).flatten())
 
     X_train = np.concatenate(X_train)
     Y_train = np.concatenate(Y_train)
