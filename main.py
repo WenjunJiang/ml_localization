@@ -2,6 +2,9 @@ import scipy.io as sio
 import numpy as np
 from sklearn import svm
 from sklearn.ensemble import RandomForestClassifier
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator, FuncFormatter
+import os
 
 
 def getLabel(xrange,yrange, pos_gt):
@@ -37,9 +40,34 @@ def ml_clf(X_train,Y_train,X_test,Y_test):
             else:
                 TT += 1
     print('FF:{},FT:{},TF:{},TT:{}'.format(FF,FT,TF,TT))
+    return Y_pred
+
+def plot_map(result,groundtruth):
+    save_path="./output/"
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+    length = result.shape[0]//936
+    fig,axes = plt.subplots(1,2)
+    for i in range(length):
+        print("Step: %04d"%i)
+        matrix_result=result[i*936:i*936+936].reshape(36,26)
+        matrix_groundtruth=groundtruth[i*936:i*936+936].reshape(36,26)
+        
+        axes[0].imshow(matrix_result)
+        # plt.sca(axes[0])
+        # plt.xticks(np.arange(1,26,1),np.arange(-2.5, 2.5, step=0.2))
+        # plt.yticks(np.arange(1,36,1),np.arange(-3.5, 3.5, step=0.2))
+        
+        axes[1].matshow(matrix_groundtruth)
+        # plt.sca(axes[1])
+        # plt.xticks(np.arange(1,26,1),np.arange(-2.5, 2.5, step=0.2))
+        # plt.yticks(np.arange(1,36,1),np.arange(-3.5, 3.5, step=0.2))
+        
+
+        plt.savefig(save_path+"%04d.png"%i)
 
 if __name__=='__main__':
-    param_path = '../../data/param_050220/'
+    param_path = 'E:/Data/param_050220/'
     motion_files = ["jwj_hori1.mat","sh_verti2.mat","shjwj_vh1.mat","jwj_hori2.mat","sh_walk1.mat","shjwj_vs1.mat","jwj_rand1.mat","sh_walk2.mat","shjwj_vv1.mat","jwj_rand2.mat","sh_walk3.mat","shjwj_vw1.mat","jwj_static1.mat","sh_walk4.mat","shjwj_vw2.mat","jwj_static2.mat","shjwj_hh1.mat","shjwj_wh1.mat","jwj_verti1.mat","shjwj_hs1.mat","shjwj_wh2.mat","jwj_verti2.mat","shjwj_hv1.mat","shjwj_ws1.mat","jwj_walk1.mat","shjwj_hw1.mat","shjwj_ws2.mat","jwj_walk2.mat","shjwj_hw2.mat","shjwj_ws3.mat","jwj_walk3.mat","shjwj_rand1.mat","shjwj_ws4.mat","jwj_walk4.mat","shjwj_rand2.mat","shjwj_wv1.mat","shjwj_rand3.mat","shjwj_wv2.mat","shjwj_sh1.mat","shjwj_ww1.mat","sh_hori1.mat","shjwj_ss1.mat","shjwj_ww2.mat","sh_hori2.mat","shjwj_ss2.mat","shjwj_ww3.mat","sh_rand1.mat","shjwj_sv1.mat","shjwj_ww4.mat","sh_rand2.mat","shjwj_sw1.mat","shjwj_ww5.mat","sh_static1.mat","shjwj_sw2.mat","shjwj_ww6.mat","sh_static2.mat","shjwj_sw3.mat","sh_verti1.mat","shjwj_sw4.mat"]
     xrange = [-3.5,3.5]
     yrange = [-2.5,2.5]
@@ -76,4 +104,5 @@ if __name__=='__main__':
     X_test = np.concatenate(X_test)
     Y_test = np.concatenate(Y_test)
 
-    ml_clf(X_train,Y_train,X_test,Y_test)
+    result = ml_clf(X_train,Y_train,X_test,Y_test)
+    plot_map(result,Y_test)
