@@ -3,7 +3,7 @@
 @Github: https://github.com/CodeOfSH
 @Date: 2020-05-29 16:17:50
 @LastEditors: CodeOfSH
-@LastEditTime: 2020-05-29 19:08:06
+@LastEditTime: 2020-05-29 21:44:22
 @Description: 
 '''
 
@@ -172,23 +172,23 @@ def get_batch(X,Y,batch_size,way='train'):
     targets[batch_size//2:] = 1
 
     # cut the X_train data
-    X_categories_0=X[Y==0]
-    len_cate_0=X_categories_0.shape[0]
-    X_categories_1=X[Y==1]
-    len_cate_1=X_categories_0.shape[1]
+    X_train_0=X[Y==0]
+    len_train_0=X_train_0.shape[0]
+    X_train_1=X[Y==1]
+    len_train_1=X_train_1.shape[0]
 
     for i in range(batch_size):
-        index_1 = rng.randint(0,len_cate_1)
-        pairs[0][i,:,:,:]=X_categories_1[index_1].reshape(3,3,1)
+        index_1 = rng.randint(0,len_train_1)
+        pairs[0][i,:,:,:]=X_train_1[index_1].reshape(3,3,1)
 
         if i >= batch_size//2:
-            index_2 = rng.randint(0,len_cate_1)
-            pairs[1][i,:,:,:]=X_categories_1[index_2].reshape(3,3,1)
+            index_2 = rng.randint(0,len_train_1)
+            pairs[1][i,:,:,:]=X_train_1[index_2].reshape(3,3,1)
         else:
-            index_2 = rng.randint(0,len_cate_0)
-            pairs[1][i,:,:,:]=X_categories_0[index_2].reshape(3,3,1)
+            index_2 = rng.randint(0,len_train_0)
+            pairs[1][i,:,:,:]=X_train_0[index_2].reshape(3,3,1)
     
-    pairs[0],pairs[1], targets = shuffle(pairs[0],pairs[1],targets)
+    # pairs[0],pairs[1], targets = shuffle(pairs[0],pairs[1],targets)
     
     return pairs, targets
 
@@ -209,26 +209,30 @@ def generate_test_batch(X_train,Y_train,X_test,Y_test):
     # init empty array for pair and targets
     pairs = [np.zeros((len_test,3,3,1)) for i in range(2)]
     targets = np.zeros((len_test,))
-
-    # make half of the len_test to be 1 to balance the data
-    targets[len_test//2:] = 1
     
-    # cut the X_train data
-    X_categories_0=X_train[Y_train==0]
-    len_cate_0=X_categories_0.shape[0]
-    X_categories_1=X_train[Y_train==1]
-    len_cate_1=X_categories_0.shape[1]
+    # cut the X_train data for 1
+    X_train_1=X_train[Y_train==1]
+    len_train_1=X_train_1.shape[0]
+
+    X_test_1=X_test[Y_test==1]
+    len_test_1=X_test_1.shape[0]
+    X_test_0=X_test[Y_test==0]
+    len_test_0=X_test_0.shape[0]
+
+    targets[:len_test_0]=0
+    targets[len_test_0:]=1
     
     for i in range(len_test):
-        pairs[0][i,:,:,:]=X_test[i].reshape(3,3,1)
-        if i >= len_test//2:
-            index_2 = rng.randint(0,len_cate_1)
-            pairs[1][i,:,:,:]=X_categories_1[index_2].reshape(3,3,1)
+        if i<len_test_0:
+            pairs[0][i,:,:,:]=X_test_0[i].reshape(3,3,1)
+            index_2=rng.randint(0,len_train_1)
+            pairs[1][i,:,:,:]=X_train_1[index_2].reshape(3,3,1)
         else:
-            index_2 = rng.randint(0,len_cate_0)
-            pairs[1][i,:,:,:]=X_categories_0[index_2].reshape(3,3,1)
+            pairs[0][i,:,:,:]=X_test_1[i-len_test_0].reshape(3,3,1)
+            index_2=rng.randint(0,len_train_1)
+            pairs[1][i,:,:,:]=X_train[index_2].reshape(3,3,1)
 
-    pairs[0],pairs[1], targets = shuffle(pairs[0],pairs[1],targets)
+    # pairs[0],pairs[1], targets = shuffle(pairs[0],pairs[1],targets)
     
     return pairs, targets
 
