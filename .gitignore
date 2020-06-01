@@ -1,3 +1,4 @@
 output/
 model/
+logs/
 plot.py

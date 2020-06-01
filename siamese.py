@@ -3,7 +3,7 @@
 @Github: https://github.com/CodeOfSH
 @Date: 2020-05-29 16:17:50
 @LastEditors: CodeOfSH
-@LastEditTime: 2020-05-29 21:44:22
+@LastEditTime: 2020-05-30 23:09:10
 @Description: 
 '''
 
@@ -34,6 +34,8 @@ from keras.engine.topology import Layer
 from keras.regularizers import l2
 from keras import backend as K
 
+from keras.callbacks import TensorBoard
+
 from sklearn.utils import shuffle
 
 param_path = 'D:/Data/param_050220/'
@@ -47,7 +49,7 @@ def read_data():
     partTrain, partPercent = True, 0.7
     allTrain, allPercent = False, 0.7
     # for fi in range(len(motion_files)):
-    for fi in range(4,5):
+    for fi in range(0,4):
         fname = param_path+'feature_'+motion_files[fi]
         feature = sio.loadmat(fname) #It is a dict with 2 keys: pos 936*2, pos_feature 936*600*9
 
@@ -130,7 +132,8 @@ def get_siamese_model(input_shape):
     
     # Convolutional Neural Network
     model = Sequential()
-    model.add(Conv2D(4, (2,2), activation='relu', input_shape=input_shape,
+    model.add(BatchNormalization(input_shape=input_shape))
+    model.add(Conv2D(4, (2,2), activation='relu',
                    kernel_initializer=initialize_weights, kernel_regularizer=l2(2e-4)))
     model.add(Flatten())
     model.add(Dense(16, activation='sigmoid',
@@ -237,7 +240,7 @@ def generate_test_batch(X_train,Y_train,X_test,Y_test):
     return pairs, targets
 
 def test_oneshot(model, test_pairs,test_labels,verbose=True):
-    # """Test average N way oneshot learning accuracy of a siamese neural net over k one-shot tasks"""
+
     n_correct = 0
     print("Evaluating model on test tasks ... \n")
     probs = model.predict(test_pairs)
@@ -273,6 +276,16 @@ if __name__=='__main__':
     if not os.path.exists(model_path):
         os.makedirs(model_path)
 
+    tbCallBack = TensorBoard(log_dir='./logs',  # log 目录
+                 histogram_freq=1,  # 按照何等频率（epoch）来计算直方图，0为不计算
+#                  batch_size=32,     # 用多大量的数据计算直方图
+                 write_graph=True,  # 是否存储网络结构图
+                 write_grads=True, # 是否可视化梯度直方图
+                 write_images=True,# 是否可视化参数
+                 embeddings_freq=0, 
+                 embeddings_layer_names=None, 
+                 embeddings_metadata=None)
+
     print("Starting training process!")
     print("-------------------------------------")
     t_start = time.time()
@@ -288,3 +301,6 @@ if __name__=='__main__':
             if val_acc >= best:
                 print("Current best: {0}, previous best: {1}".format(val_acc, best))
                 best = val_acc
+
+    # (inputs,targets) = get_batch(X_train,Y_train,100000)
+    # model.fit(inputs,targets,epochs=100,callbacks=[tbCallBack],validation_split=0.1)
