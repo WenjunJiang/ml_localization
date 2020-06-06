@@ -3,7 +3,7 @@
 @Github: https://github.com/CodeOfSH
 @Date: 2020-05-30 15:36:40
 @LastEditors: CodeOfSH
-@LastEditTime: 2020-06-02 16:32:34
+@LastEditTime: 2020-06-02 22:44:14
 @Description: 
 '''
 import os
@@ -49,7 +49,7 @@ def read_data():
     partTrain, partPercent = True, 0.7
     allTrain, allPercent = False, 0.7
     # for fi in range(len(motion_files)):
-    for fi in range(0,10):
+    for fi in range(10):
         fname = param_path+'feature_'+motion_files[fi]
         feature = sio.loadmat(fname) #It is a dict with 2 keys: pos 936*2, pos_feature 936*600*9
 
@@ -60,17 +60,17 @@ def read_data():
         featureMat = feature['pos_feature']
 
         if partTrain:
-            X_train.append(np.transpose(featureMat[:,:int(featureMat.shape[1]*partPercent),:],(1,0,2)).reshape((-1,9)))
-            Y_train.append(np.transpose(labelMat[:,:int(labelMat.shape[1]*partPercent)],(1,0)).flatten())
-            X_test.append(np.transpose(featureMat[:,int(featureMat.shape[1]*partPercent):,:],(1,0,2)).reshape(-1,9))
-            Y_test.append(np.transpose(labelMat[:,int(labelMat.shape[1] * partPercent):],(1,0)).flatten())
+            X_train.append(np.transpose(featureMat[:,:int(featureMat.shape[1]*partPercent),:],(1,0,2)).reshape((-1,36,26,9)))
+            Y_train.append(np.transpose(labelMat[:,:int(labelMat.shape[1]*partPercent)],(1,0)).reshape(-1,936))
+            X_test.append(np.transpose(featureMat[:,int(featureMat.shape[1]*partPercent):,:],(1,0,2)).reshape(-1,36,26,9))
+            Y_test.append(np.transpose(labelMat[:,int(labelMat.shape[1] * partPercent):],(1,0)).reshape(-1,936))
         elif allTrain:
             if fi<=len(motion_files)*allPercent:
-                X_train.append(np.transpose(featureMat,(1,0,2)).reshape((-1,9)))
-                Y_train.append(np.transpose(labelMat,(1,0)).flatten())
+                X_train.append(np.transpose(featureMat,(1,0,2)).reshape((-1,36,26,9)))
+                Y_train.append(np.transpose(labelMat,(1,0)).reshape(-1,936))
             else:
-                X_test.append(np.transpose(featureMat,(1,0,2)).reshape((-1,9)))
-                Y_test.append(np.transpose(labelMat,(1,0)).flatten())
+                X_test.append(np.transpose(featureMat,(1,0,2)).reshape((-1,36,26,9)))
+                Y_test.append(np.transpose(labelMat,(1,0)).reshape(-1,936))
 
     X_train = np.concatenate(X_train)
     Y_train = np.concatenate(Y_train)
@@ -100,50 +100,19 @@ def initialize_weights(shape, name=None):
 def initialize_bias(shape, name=None):
     return np.random.normal(loc = 0.5, scale = 1e-2, size = shape)
     
-def get_model(input_shape):
+def get_model(input_shape,output_shape):
     # Define the tensors for the input 
     input_data = Input(input_shape)
 
-    # 1 Dimension Conv Neural Network
     model = Sequential()
     model.add(BatchNormalization(input_shape=input_shape))
-    model.add(Conv1D(100,9, activation='relu', padding='same',
-                kernel_initializer=initialize_weights,
-                bias_initializer=initialize_bias))
-    model.add(Conv1D(60,9, activation='relu', padding='same',
-                kernel_initializer=initialize_weights,
-                bias_initializer=initialize_bias))
-    model.add(Conv1D(30,3, activation='relu', padding='same',
-                kernel_initializer=initialize_weights,
-                bias_initializer=initialize_bias))
+    model.add(Conv2D(32, kernel_size=(9, 9),activation='relu',padding='same'))
+    model.add(Conv2D(64, kernel_size=(3, 3),activation='relu',padding='same'))
+    model.add(MaxPool2D(pool_size=(3,3)))
     model.add(Dropout(0.5))
     model.add(Flatten())
-    model.add(Dense(1, activation='sigmoid',
-                kernel_initializer=initialize_weights,
-                bias_initializer=initialize_bias))
+    model.add(Dense(936, activation='sigmoid'))
     return model
-
-def get_batch(X_train_0, X_train_1, batch_size):
-    len_train_0=X_train_0.shape[0]
-    len_train_1=X_train_1.shape[0]
-
-    new_input = np.zeros((batch_size,9,1))
-    new_label = np.zeros((batch_size,))
-
-    new_label[batch_size//2:]=1
-
-    for i in range(batch_size):
-        if i < batch_size//2:
-            index = rng.randint(0,len_train_0)
-            new_input[i,:]=X_train_0[index].reshape(9,1)
-        else:
-            index = rng.randint(0,len_train_1)
-            new_input[i,:]=X_train_1[index].reshape(9,1)
-
-    # shuffle the generated data
-    new_input, new_label = shuffle(new_input, new_label)
-
-    return new_input, new_label
 
 def test_task(model, X_test, Y_test, mode=0):
     print("---Evaluating model on test tasks---")
@@ -176,15 +145,15 @@ def plot_map(file_name, predict, groundtruth):
     local_save_path=save_path+file_name+"/"
     if not os.path.exists(local_save_path):
         os.makedirs(local_save_path)
-    length = predict.shape[0]//936
+    length = predict.shape[0]
     fig,axes = plt.subplots(1,2)
     save_file_name = local_save_path+file_name
     print("Now processing: "+str(save_file_name))
     for i in range(length):
 
         print("Step: %04d"%i)
-        matrix_predict=predict[i*936:i*936+936].reshape(36,26)
-        matrix_groundtruth=groundtruth[i*936:i*936+936].reshape(36,26)
+        matrix_predict=predict[i].reshape(36,26)
+        matrix_groundtruth=groundtruth[i].reshape(36,26)
         
         axes[0].imshow(matrix_predict)
         # plt.sca(axes[0])
@@ -212,31 +181,57 @@ def test_on_file(model,file_names):
         
         inputs, labels=[],[]
 
-        inputs = np.transpose(featureMat,(1,0,2)).reshape((-1,9,1))
-        labels = np.transpose(labelMat,(1,0)).flatten()
+        inputs = np.transpose(featureMat,(1,0,2)).reshape((-1,36,26,9))
+        labels = np.transpose(labelMat,(1,0)).reshape(-1,936)
 
         predict = model.predict(inputs)
         plot_map(file_name[:-4],predict,labels)
+    
+def test_on_array(model, X_test, Y_test):
+    local_save_path=save_path+"test_array/"
+    if not os.path.exists(local_save_path):
+        os.makedirs(local_save_path)
+    predict = model.predict(X_test)
+    length = predict.shape[0]
+    fig,axes = plt.subplots(1,2)
+    save_file_name = local_save_path
+    print("Now processing: "+str(save_file_name))
+    for i in range(length):
+
+        print("Step: %04d"%i)
+        matrix_predict=predict[i].reshape(36,26)
+        matrix_groundtruth=Y_test[i].reshape(36,26)
+        
+        axes[0].imshow(matrix_predict)
+        # plt.sca(axes[0])
+        # plt.xticks(np.arange(1,26,1),np.arange(-2.5, 2.5, step=0.2))
+        # plt.yticks(np.arange(1,36,1),np.arange(-3.5, 3.5, step=0.2))
+        
+        axes[1].matshow(matrix_groundtruth)
+        # plt.sca(axes[1])
+        # plt.xticks(np.arange(1,26,1),np.arange(-2.5, 2.5, step=0.2))
+        # plt.yticks(np.arange(1,36,1),np.arange(-3.5, 3.5, step=0.2))
+
+        plt.savefig(save_file_name+"_%04d.png"%i)
+
 
 if __name__=='__main__':
     
     X_train,Y_train,X_test,Y_test = read_data()
-    X_test=np.reshape(X_test,(-1,9,1))
+    print(X_train.shape)
+    print(Y_train.shape)
 
-    X_train_0=X_train[Y_train==0]
-    X_train_1=X_train[Y_train==1]
-
-    model = get_model((9,1))
+    model = get_model((36,26,9),(36,26))
     model.summary()
 
     optimizer= Adam(lr=0.00005)
-    model.compile(loss="binary_crossentropy", optimizer=optimizer)
+    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
     batch_size = 1024
-    iteration = 20000
+    iteration = 500
     record_every = 100
     best = -1
-    need_train = False
+    need_train = True
 
     if not os.path.exists(model_path):
         os.makedirs(model_path)
@@ -247,28 +242,27 @@ if __name__=='__main__':
         print("-------------------------------------")
         t_start = time.time()
 
-        # history = model.fit(X_train, Y_train, epochs=100, batch_size=512, validation_split=0.2)
+        history = model.fit(X_train, Y_train, epochs=iteration, batch_size=batch_size, shuffle=True, validation_split=0.1)
         # val_acc = test_task(model, X_test, Y_test)
         # test_task(model, X_test, Y_test, mode=1)
 
-        losses=[]
-        for i in range(iteration):
-            (inputs, labels) = get_batch(X_train_0, X_train_1, batch_size)
-            loss = model.train_on_batch(inputs, labels)
-            if i % record_every ==0:
-                print("Step: {0} Loss: {1}".format(i,loss))
-                losses.append(loss)
-        
-        val_acc = test_task(model, X_test, Y_test, mode=0)
-        test_task(model, X_test, Y_test, mode=1)
+        model.save(model_path+"cnn_map_model.h5")
 
-        plt.plot(losses, 'bo', label='Training loss')
-        plt.show(block=False)
+        print(history.history.keys())
+        plt.plot(history.history['acc'])
+        plt.plot(history.history['val_acc'])
+        plt.title('Model accuracy')
+        plt.savefig("./train_loss_pic.png")
+        plt.show()
 
-        model.save(model_path+"cnn_model.h5")
 
-    model.load_weights(model_path+"cnn_model.h5")
+    model.load_weights(model_path+"cnn_map_model.h5")
     model.summary()
+    test_on_array(model,X_test,Y_test)
 
-    test_files=["jwj_hori2.mat","sh_walk1.mat","shjwj_vs1.mat"]
-    test_on_file(model,test_files)
+
+    # test_files=["jwj_hori2.mat","sh_walk1.mat","shjwj_vs1.mat"]
+    # test_files=["sh_walk1.mat","jwj_rand2.mat","shjwj_vs1.mat"]
+    test_files=["shjwj_ww6.mat","sh_static2.mat","shjwj_sw3.mat","sh_verti1.mat","shjwj_sw4.mat"]
+
+    # test_on_file(model,test_files)
