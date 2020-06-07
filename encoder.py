@@ -3,7 +3,7 @@
 @Github: https://github.com/CodeOfSH
 @Date: 2020-05-30 15:36:40
 @LastEditors: CodeOfSH
-@LastEditTime: 2020-06-06 20:04:52
+@LastEditTime: 2020-06-03 23:08:10
 @Description: 
 '''
 import os
@@ -49,7 +49,7 @@ def read_data():
     partTrain, partPercent = True, 0.7
     allTrain, allPercent = False, 0.7
     # for fi in range(len(motion_files)):
-    for fi in range(len(motion_files)):
+    for fi in range(len(motion_files)-5):
         fname = param_path+'feature_'+motion_files[fi]
         feature = sio.loadmat(fname) #It is a dict with 2 keys: pos 936*2, pos_feature 936*600*9
 
@@ -61,16 +61,16 @@ def read_data():
 
         if partTrain:
             X_train.append(np.transpose(featureMat[:,:int(featureMat.shape[1]*partPercent),:],(1,0,2)).reshape((-1,36,26,9)))
-            Y_train.append(np.transpose(labelMat[:,:int(labelMat.shape[1]*partPercent)],(1,0)).reshape(-1,936))
+            Y_train.append(np.transpose(labelMat[:,:int(labelMat.shape[1]*partPercent)],(1,0)).reshape(-1,36,26,1))
             X_test.append(np.transpose(featureMat[:,int(featureMat.shape[1]*partPercent):,:],(1,0,2)).reshape(-1,36,26,9))
-            Y_test.append(np.transpose(labelMat[:,int(labelMat.shape[1] * partPercent):],(1,0)).reshape(-1,936))
+            Y_test.append(np.transpose(labelMat[:,int(labelMat.shape[1] * partPercent):],(1,0)).reshape(-1,36,26,1))
         elif allTrain:
             if fi<=len(motion_files)*allPercent:
                 X_train.append(np.transpose(featureMat,(1,0,2)).reshape((-1,36,26,9)))
-                Y_train.append(np.transpose(labelMat,(1,0)).reshape(-1,936))
+                Y_train.append(np.transpose(labelMat,(1,0)).reshape(-1,36,26,1))
             else:
                 X_test.append(np.transpose(featureMat,(1,0,2)).reshape((-1,36,26,9)))
-                Y_test.append(np.transpose(labelMat,(1,0)).reshape(-1,936))
+                Y_test.append(np.transpose(labelMat,(1,0)).reshape(-1,36,26,1))
 
     X_train = np.concatenate(X_train)
     Y_train = np.concatenate(Y_train)
@@ -101,16 +101,56 @@ def initialize_bias(shape, name=None):
     return np.random.normal(loc = 0.5, scale = 1e-2, size = shape)
     
 def get_model(input_shape,output_shape):
-    # Define the tensors for the input 
+    # input_img = Input(shape=input_shape)
+    # encoded = Flatten()(input_img)
+    # encoded = Dense(512, activation='relu')(encoded)
+    # encoded = Dense(256, activation='relu')(encoded)
+    # encoded = Dense(128, activation='relu')(encoded)
+    # encoded = Dense(64, activation='relu')(encoded)
+    # encoded = Dense(32, activation='relu')(encoded)
+
+    # decoded = Dense(64, activation='relu')(encoded)
+    # decoded = Dense(128, activation='relu')(decoded)
+    # decoded = Dense(256, activation='relu')(decoded)
+    # decoded = Dense(512, activation='relu')(decoded)
+    # decoded = Dense(936, activation='sigmoid')(decoded)
+    # decoded = Reshape((36,26))(decoded)
+
+    # autoencoder = Model(input=input_img, output=decoded)
+    # return autoencoder
+
     model = Sequential()
     model.add(BatchNormalization(input_shape=input_shape))
-    model.add(Conv2D(32, kernel_size=(9, 9),activation='relu',padding='same'))
-    model.add(Conv2D(64, kernel_size=(3, 3),activation='relu',padding='same'))
-    model.add(MaxPool2D(pool_size=(3,3)))
-    model.add(Dropout(0.5))
-    model.add(Flatten())
-    model.add(Dense(936, activation='sigmoid'))
+    model.add(Conv2D(32, kernel_size=(9,9),activation='relu',padding='same'))
+    model.add(Conv2D(64, kernel_size=(3,3),activation='relu',padding='same'))
+    model.add(Conv2D(128, kernel_size=(3,3),activation='relu',padding='same'))
+    model.add(Dense(64,activation='relu'))
+    model.add(Conv2DTranspose(128, kernel_size=(3,3),activation='relu',padding='same'))
+    model.add(Conv2DTranspose(64, kernel_size=(3,3),activation='relu',padding='same'))
+    model.add(Conv2DTranspose(32, kernel_size=(9,9),activation='relu',padding='same'))
+    model.add(Conv2DTranspose(1, kernel_size=(3,3),activation='sigmoid',padding='same'))
+
     return model
+
+    # input_data = Input(input_shape)
+    # x = Convolution2D(32, (9, 9), activation='relu', padding='same')(input_data)  
+    # x = MaxPooling2D((2, 2), padding='same')(x)  
+    # x = Convolution2D(64, (3, 3), activation='relu', padding='same')(x)  
+    # # x = MaxPooling2D((2, 2), padding='same')(x)  
+    # x = Convolution2D(128, (3, 3), activation='relu', padding='same')(x)
+    # # x = MaxPooling2D((2, 2), padding='same')(x)  
+    # x = Dense(256,activation='relu')(x)
+    # x = Convolution2D(128, (3, 3), activation='relu', padding='same')(x)  
+    # # x = UpSampling2D((2, 2))(x)  
+    # x = Convolution2D(64, (3, 3), activation='relu', padding='same')(x)  
+    # x = UpSampling2D((2, 2))(x)  
+    # x = Convolution2D(32, (9, 9), activation='relu',padding='same')(x)  
+    # # x = UpSampling2D((2, 2))(x)  
+    # decoded = Convolution2D(1, (3, 3), activation='sigmoid', padding='same')(x)  
+    
+    # autoencoder = Model(inputs=input_data, outputs=decoded)
+    # return autoencoder
+
 
 def test_task(model, X_test, Y_test, mode=0):
     print("---Evaluating model on test tasks---")
@@ -210,7 +250,7 @@ def test_on_array(model, X_test, Y_test):
         # plt.xticks(np.arange(1,26,1),np.arange(-2.5, 2.5, step=0.2))
         # plt.yticks(np.arange(1,36,1),np.arange(-3.5, 3.5, step=0.2))
 
-        plt.savefig(save_file_name+"_%04d.png"%i)
+        plt.savefig(save_file_name+"test_%04d.png"%i)
 
 
 if __name__=='__main__':
@@ -223,10 +263,10 @@ if __name__=='__main__':
     model.summary()
 
     optimizer= Adam(lr=0.00005)
-    model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+    model.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
     batch_size = 256
-    iteration = 5000
+    iteration = 300
     record_every = 100
     best = -1
     need_train = True
@@ -244,7 +284,7 @@ if __name__=='__main__':
         # val_acc = test_task(model, X_test, Y_test)
         # test_task(model, X_test, Y_test, mode=1)
 
-        model.save(model_path+"cnn_map_model.h5")
+        model.save(model_path+"autoencoder_model.h5")
 
         print(history.history.keys())
         plt.plot(history.history['acc'])
@@ -252,15 +292,9 @@ if __name__=='__main__':
         plt.title('Model accuracy')
         plt.savefig("./train_loss_pic.png")
         plt.show(block=False)
-        print(history.history.keys())
-        plt.plot(history.history['loss'])
-        plt.plot(history.history['val_loss'])
-        plt.title('Model loss')
-        plt.savefig("./train_loss_pic.png")
-        plt.show(block=False)
 
 
-    model.load_weights(model_path+"cnn_map_model.h5")
+    model.load_weights(model_path+"autoencoder_model.h5")
     model.summary()
     test_on_array(model,X_test,Y_test)
 
