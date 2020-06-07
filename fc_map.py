@@ -3,7 +3,7 @@
 @Github: https://github.com/CodeOfSH
 @Date: 2020-05-30 15:36:40
 @LastEditors: CodeOfSH
-@LastEditTime: 2020-06-06 20:04:52
+@LastEditTime: 2020-06-06 20:02:26
 @Description: 
 '''
 import os
@@ -103,13 +103,19 @@ def initialize_bias(shape, name=None):
 def get_model(input_shape,output_shape):
     # Define the tensors for the input 
     model = Sequential()
-    model.add(BatchNormalization(input_shape=input_shape))
-    model.add(Conv2D(32, kernel_size=(9, 9),activation='relu',padding='same'))
-    model.add(Conv2D(64, kernel_size=(3, 3),activation='relu',padding='same'))
-    model.add(MaxPool2D(pool_size=(3,3)))
-    model.add(Dropout(0.5))
-    model.add(Flatten())
-    model.add(Dense(936, activation='sigmoid'))
+    model.add(Flatten(input_shape=input_shape))
+    model.add(BatchNormalization())
+    model.add(Dense(1600,activation='relu',
+                kernel_initializer=initialize_weights,
+                bias_initializer=initialize_bias,))
+    model.add(Dropout(0.25))
+    model.add(Dense(1600,activation='relu',
+                kernel_initializer=initialize_weights,
+                bias_initializer=initialize_bias,))
+    model.add(Dropout(0.25))
+    model.add(Dense(936, activation='sigmoid',
+                kernel_initializer=initialize_weights,
+                bias_initializer=initialize_bias,))
     return model
 
 def test_task(model, X_test, Y_test, mode=0):
@@ -222,11 +228,11 @@ if __name__=='__main__':
     model = get_model((36,26,9),(36,26))
     model.summary()
 
-    optimizer= Adam(lr=0.00005)
+    optimizer= Adam(lr=0.0001)
     model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
     batch_size = 256
-    iteration = 5000
+    iteration = 1000
     record_every = 100
     best = -1
     need_train = True
@@ -244,13 +250,13 @@ if __name__=='__main__':
         # val_acc = test_task(model, X_test, Y_test)
         # test_task(model, X_test, Y_test, mode=1)
 
-        model.save(model_path+"cnn_map_model.h5")
+        model.save(model_path+"fc_map_model.h5")
 
         print(history.history.keys())
         plt.plot(history.history['acc'])
         plt.plot(history.history['val_acc'])
         plt.title('Model accuracy')
-        plt.savefig("./train_loss_pic.png")
+        plt.savefig("./train_acc_pic.png")
         plt.show(block=False)
         print(history.history.keys())
         plt.plot(history.history['loss'])
@@ -260,7 +266,7 @@ if __name__=='__main__':
         plt.show(block=False)
 
 
-    model.load_weights(model_path+"cnn_map_model.h5")
+    model.load_weights(model_path+"fc_map_model.h5")
     model.summary()
     test_on_array(model,X_test,Y_test)
 

@@ -2,3 +2,5 @@ output/
 model/
 logs/
 plot.py
+train_acc_pic.png
+train_loss_pic.png
